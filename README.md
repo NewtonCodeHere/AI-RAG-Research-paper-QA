@@ -65,8 +65,8 @@ AI-Research-Paper-Assistant/
 ### Clone Repository
 
 ```bash
-git clone https://github.com/NewtonCodeHere/AI-Research-Paper-Assistant.git
-cd AI-Research-Paper-Assistant
+git clone https://github.com/NewtonCodeHere/AI-RAG-Research-paper-QA.git
+cd AI-RAG-Research-paper-QA
 ```
 
 ### Create Virtual Environment

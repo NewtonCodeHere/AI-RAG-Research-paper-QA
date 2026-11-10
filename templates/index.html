@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Research Paper Assistant | RAG & Gemini</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+  <!-- Markdown parser for rich AI output rendering -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body>
+  <div class="app-container">
+    <!-- Top Navigation Header -->
+    <header class="app-header">
+      <div class="header-left">
+        <div class="logo-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+            <path d="M9 10h6"></path>
+            <path d="M9 6h6"></path>
+            <path d="M9 14h4"></path>
+          </svg>
+        </div>
+        <div>
+          <h1 class="app-title">AI Research Paper Assistant</h1>
+          <p class="app-subtitle">Retrieval-Augmented Generation (RAG) with ChromaDB & Google Gemini</p>
+        </div>
+      </div>
+      <div class="header-right">
+        <div class="author-badge">
+          <span class="author-label">Author</span>
+          <span class="author-name">Mani Barathi P (NewtonCode)</span>
+          <span class="org-tag">CodeBind Technologies</span>
+        </div>
+        <div class="status-badge" id="gemini-status">
+          <span class="status-dot"></span>
+          <span id="gemini-status-text">Checking System...</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="main-layout">
+      <!-- Sidebar / Document Manager -->
+      <aside class="sidebar">
+        <!-- Upload Section -->
+        <div class="card upload-card">
+          <div class="card-header">
+            <h3>Upload Research Papers</h3>
+            <span class="badge">PDF</span>
+          </div>
+
+          <div class="drop-zone" id="drop-zone">
+            <div class="drop-icon">
+              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="17 8 12 3 7 8"></polyline>
+                <line x1="12" y1="3" x2="12" y2="15"></line>
+              </svg>
+            </div>
+            <p class="drop-primary">Drag & drop research PDFs here</p>
+            <p class="drop-secondary">or <span class="browse-link">browse files</span></p>
+            <input type="file" id="file-input" accept=".pdf" multiple hidden>
+          </div>
+
+          <div id="upload-status" class="upload-status hidden">
+            <div class="spinner-small"></div>
+            <span id="upload-status-text">Processing paper chunks...</span>
+          </div>
+        </div>
+
+        <!-- Indexed Papers List -->
+        <div class="card documents-card">
+          <div class="card-header">
+            <h3>Indexed Papers</h3>
+            <span class="badge badge-info" id="indexed-count-badge">0 documents</span>
+          </div>
+
+          <div class="documents-list" id="documents-list">
+            <div class="empty-state-small">
+              <p>No research papers indexed yet.</p>
+              <span>Upload a PDF paper above to begin retrieval.</span>
+            </div>
+          </div>
+
+          <div class="card-footer">
+            <div class="stats-text" id="total-chunks-info">Total chunks: 0</div>
+            <button class="btn btn-secondary btn-sm" id="clear-db-btn" title="Clear all indexed documents">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+              </svg>
+              Clear Knowledge Base
+            </button>
+          </div>
+        </div>
+
+        <!-- Suggested Questions -->
+        <div class="card prompt-suggestions-card">
+          <div class="card-header">
+            <h3>Sample Research Questions</h3>
+          </div>
+          <div class="suggestion-pills">
+            <button class="prompt-pill" data-query="What is the primary contribution and novelty of this research paper?">
+              Primary Contribution & Novelty
+            </button>
+            <button class="prompt-pill" data-query="Explain the proposed methodology, architecture, and pipeline in detail.">
+              Methodology & Architecture
+            </button>
+            <button class="prompt-pill" data-query="What datasets, evaluation metrics, and baseline models were compared?">
+              Datasets & Baselines
+            </button>
+            <button class="prompt-pill" data-query="What are the key limitations or future research directions discussed by the authors?">
+              Limitations & Future Work
+            </button>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Chat / Q&A Area -->
+      <section class="chat-section">
+        <div class="chat-header">
+          <div class="chat-header-info">
+            <h2>Semantic Research Q&A</h2>
+            <p>Ask natural language questions across all indexed research documents</p>
+          </div>
+          <button class="btn btn-ghost btn-sm" id="clear-chat-btn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+              <path d="M3 3v5h5"></path>
+              <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"></path>
+              <path d="M16 21h5v-5"></path>
+            </svg>
+            Reset Chat
+          </button>
+        </div>
+
+        <!-- Chat Messages Container -->
+        <div class="chat-messages" id="chat-messages">
+          <!-- Welcome Message -->
+          <div class="message system-welcome">
+            <div class="welcome-card">
+              <div class="welcome-header">
+                <div class="welcome-icon">✨</div>
+                <div>
+                  <h4>Welcome to AI Research Paper Assistant</h4>
+                  <p>A Retrieval-Augmented Generation (RAG) platform designed for researchers, students, and engineers.</p>
+                </div>
+              </div>
+              <div class="welcome-steps">
+                <div class="step-item">
+                  <span class="step-num">1</span>
+                  <span><strong>Upload:</strong> Drop research paper PDFs to extract text and generate sentence-transformer embeddings.</span>
+                </div>
+                <div class="step-item">
+                  <span class="step-num">2</span>
+                  <span><strong>Index:</strong> Chunks are stored in ChromaDB vector space with page-level metadata.</span>
+                </div>
+                <div class="step-item">
+                  <span class="step-num">3</span>
+                  <span><strong>Query:</strong> Ask questions to retrieve grounded context and receive Gemini-synthesized answers with exact page references.</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Input Bar -->
+        <div class="chat-input-wrapper">
+          <form id="query-form" class="chat-input-form">
+            <textarea
+              id="query-input"
+              rows="1"
+              placeholder="Ask a question about your uploaded research papers... (Press Enter to submit, Shift+Enter for newline)"
+              required
+            ></textarea>
+            <button type="submit" id="send-btn" class="btn btn-primary" title="Send Question">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="22" y1="2" x2="11" y2="13"></line>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+              </svg>
+            </button>
+          </form>
+          <div class="chat-footer-caption">
+            Answers are retrieved from ChromaDB vector space and synthesized by Google Gemini with verified page citations.
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
